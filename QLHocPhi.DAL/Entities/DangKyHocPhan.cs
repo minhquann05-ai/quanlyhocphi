@@ -16,9 +16,9 @@ namespace QLHocPhi.DAL.Entities
         [Column("ma_sv")]
         public string MaSv { get; set; }
 
-        [StringLength(10)]
-        [Column("ma_mh")]
-        public string? MaMh { get; set; }
+        [StringLength(15)]
+        [Column("ma_lhp")]
+        public string MaLhp { get; set; }
 
         [StringLength(10)]
         [Column("ma_hk")]
@@ -34,10 +34,10 @@ namespace QLHocPhi.DAL.Entities
         [ForeignKey("MaSv")]
         public virtual SinhVien? SinhVien { get; set; }
 
-        [ForeignKey("MaMh")]
-        public virtual MonHoc? MonHoc { get; set; }
 
         [ForeignKey("MaHk")]
         public virtual HocKy? HocKy { get; set; }
+        [ForeignKey("MaLhp")]
+        public virtual LopHocPhan LopHocPhan { get; set; }
     }
 }

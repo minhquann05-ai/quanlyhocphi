@@ -37,6 +37,11 @@ namespace QLHocPhi.BLL.Mapping
         .ForMember(dest => dest.TenLop, opt => opt.MapFrom(src => src.LopHoc.TenLop));
             CreateMap<SinhVienCreateDto, SinhVien>();
             CreateMap<SinhVienUpdateDto, SinhVien>();
+            CreateMap<LopHocPhan, LopHocPhanDto>()
+    .ForMember(dest => dest.TenMonHoc, opt => opt.MapFrom(src => src.MonHoc.TenMh))
+    .ForMember(dest => dest.SoTinChi, opt => opt.MapFrom(src => src.MonHoc.SoTinChi));
+            CreateMap<LopHocPhanCreateDto, LopHocPhan>();
+            CreateMap<LopHocPhanUpdateDto, LopHocPhan>();
         }
     }
 }

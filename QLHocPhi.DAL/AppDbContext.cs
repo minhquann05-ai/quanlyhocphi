@@ -22,6 +22,7 @@ namespace QLHocPhi.DAL
         public DbSet<ThanhToan> ThanhToans { get; set; }
         public DbSet<BienLai> BienLais { get; set; }
         public DbSet<NguoiDung> NguoiDungs { get; set; }
+        public DbSet<LopHocPhan> LopHocPhans { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

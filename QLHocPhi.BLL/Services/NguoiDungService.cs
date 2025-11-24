@@ -18,7 +18,7 @@ namespace QLHocPhi.BLL.Services
     {
         private readonly AppDbContext _context;
         // Khóa bí mật (Nên để trong appsettings.json)
-        private const string SECRET_KEY = "DayLaMotCaiKhoaBiMatRatDaiVaRatBaoMatChoDoAnCuaBan";
+        private const string SECRET_KEY = "111111111111111111111111111111111111111111111";
 
         public NguoiDungService(AppDbContext context)
         {

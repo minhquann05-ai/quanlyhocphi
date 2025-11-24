@@ -26,7 +26,6 @@ namespace QLHocPhi.DAL.Entities
 
         [ForeignKey("MaNganh")]
         public virtual NganhHoc? NganhHoc { get; set; }
-
-        public virtual ICollection<DangKyHocPhan>? DangKyHocPhans { get; set; }
+        public virtual ICollection<LopHocPhan> LopHocPhans { get; set; }
     }
 }

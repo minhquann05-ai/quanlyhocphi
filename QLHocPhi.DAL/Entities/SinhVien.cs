@@ -26,10 +26,18 @@ namespace QLHocPhi.DAL.Entities
         [StringLength(15)]
         [Column("ma_lop")]
         public string? MaLop { get; set; }
+        [StringLength(100)]
+        [Column("email")]
+        public string? Email { get; set; }
+
+        [StringLength(15)]
+        [Column("sdt")]
+        public string? Sdt { get; set; }
 
         [ForeignKey("MaLop")]
         public virtual LopHoc? LopHoc { get; set; }
 
         public virtual ICollection<HoaDon>? HoaDons { get; set; }
+
     }
 }

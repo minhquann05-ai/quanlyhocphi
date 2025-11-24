@@ -14,7 +14,7 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
-var secretKey = "DayLaMotCaiKhoaBiMatRatDaiVaRatBaoMatChoDoAnCuaBan";
+var secretKey = "111111111111111111111111111111111111111111111";
 var key = Encoding.ASCII.GetBytes(secretKey);
 builder.Services.AddAuthentication(options =>
 {
@@ -51,6 +51,7 @@ builder.Services.AddScoped<IBienLaiService, BienLaiService>();
 builder.Services.AddScoped<IBaoCaoService, BaoCaoService>();
 builder.Services.AddScoped<ISinhVienService, SinhVienService>();
 builder.Services.AddScoped<INguoiDungService, NguoiDungService>();
+builder.Services.AddScoped<ILopHocPhanService, LopHocPhanService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

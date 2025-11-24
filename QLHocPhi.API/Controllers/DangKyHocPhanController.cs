@@ -65,5 +65,57 @@ namespace QLHocPhi.API.Controllers
                 return BadRequest(errorMessage);
             }
         }
+        [HttpGet("available-classes")]
+        [Authorize(Roles = "SinhVien")] // Chỉ sinh viên mới cần lấy danh sách này để đăng ký
+        public async Task<IActionResult> GetAvailableClasses()
+        {
+            try
+            {
+                // Tự động lấy mã SV từ Token
+                var maSv = User.FindFirst("MaSv")?.Value;
+                if (string.IsNullOrEmpty(maSv)) return Unauthorized();
+
+                var listLop = await _dangKyHocPhanService.GetAvailableClassesForStudentAsync(maSv);
+                return Ok(listLop);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+        [HttpDelete]
+        [Authorize(Roles = "PhongTaiChinh,SinhVien")] // Cả 2 đều được
+        public async Task<IActionResult> CancelRegistration([FromQuery] string maLhp, [FromQuery] string? maSv)
+        {
+            try
+            {
+                // 1. Logic phân quyền lấy MaSv (Giống hệt lúc tạo)
+                var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+                var tokenMaSv = User.FindFirst("MaSv")?.Value;
+                string targetMaSv = maSv;
+
+                if (role == "SinhVien")
+                {
+                    targetMaSv = tokenMaSv; // Sinh viên chỉ được hủy của mình
+                }
+                else if (string.IsNullOrEmpty(targetMaSv))
+                {
+                    return BadRequest("Vui lòng nhập mã sinh viên cần hủy.");
+                }
+
+                // 2. Gọi Service
+                await _dangKyHocPhanService.CancelRegistrationAsync(targetMaSv, maLhp);
+
+                return Ok(new { message = $"Đã hủy đăng ký lớp {maLhp} thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }
