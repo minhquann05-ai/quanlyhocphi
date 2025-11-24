@@ -78,5 +78,41 @@ namespace QLHocPhi.BLL.Services
                 throw;
             }
         }
+        public async Task UpdateAsync(string maSv, SinhVienUpdateDto updateDto)
+        {
+            var sinhVien = await _context.SinhViens.FindAsync(maSv);
+            if (sinhVien == null)
+            {
+                throw new KeyNotFoundException("Sinh viên không tồn tại.");
+            }
+
+            // Dùng AutoMapper để cập nhật dữ liệu từ DTO vào Entity
+            _mapper.Map(updateDto, sinhVien);
+
+            _context.SinhViens.Update(sinhVien);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(string maSv)
+        {
+            var sinhVien = await _context.SinhViens.FindAsync(maSv);
+            if (sinhVien == null)
+            {
+                throw new KeyNotFoundException("Sinh viên không tồn tại.");
+            }
+
+            // 1. Xóa tài khoản đăng nhập tương ứng (nếu có)
+            var taiKhoan = await _context.NguoiDungs.FindAsync(maSv); // Vì User = MaSv
+            if (taiKhoan != null)
+            {
+                _context.NguoiDungs.Remove(taiKhoan);
+            }
+
+            // 2. Xóa sinh viên
+            // Lưu ý: Nếu sinh viên đã có Hóa đơn/Điểm, việc xóa có thể bị lỗi do ràng buộc khóa ngoại (tùy CSDL)
+            _context.SinhViens.Remove(sinhVien);
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

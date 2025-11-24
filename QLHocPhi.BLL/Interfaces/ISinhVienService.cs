@@ -12,5 +12,7 @@ namespace QLHocPhi.BLL.Interfaces
         Task<IEnumerable<SinhVienDto>> GetAllAsync();
         Task<SinhVienDto> GetByIdAsync(string maSv);
         Task<SinhVienDto> CreateAsync(SinhVienCreateDto createDto);
+        Task UpdateAsync(string maSv, SinhVienUpdateDto updateDto);
+        Task DeleteAsync(string maSv);
     }
 }

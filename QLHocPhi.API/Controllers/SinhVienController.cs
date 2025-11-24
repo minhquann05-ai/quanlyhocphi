@@ -83,5 +83,49 @@ namespace QLHocPhi.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
+        [HttpPut("{maSv}")]
+        [Authorize(Roles = "PhongTaiChinh")] // Chỉ Admin
+        public async Task<IActionResult> UpdateSinhVien(string maSv, [FromBody] SinhVienUpdateDto updateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                await _sinhVienService.UpdateAsync(maSv, updateDto);
+                return NoContent(); // 204 No Content
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Xóa sinh viên (và tài khoản liên quan)
+        /// </summary>
+        [HttpDelete("{maSv}")]
+        [Authorize(Roles = "PhongTaiChinh")] // Chỉ Admin
+        public async Task<IActionResult> DeleteSinhVien(string maSv)
+        {
+            try
+            {
+                await _sinhVienService.DeleteAsync(maSv);
+                return NoContent(); // 204 No Content
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex) // Bắt lỗi ràng buộc khóa ngoại (nếu có hóa đơn)
+            {
+                // Thường là lỗi "23503: foreign key violation"
+                return BadRequest($"Không thể xóa sinh viên này (có thể do đã có dữ liệu học phí). Chi tiết: {ex.Message}");
+            }
+        }
     }
 }
