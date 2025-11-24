@@ -1,0 +1,15 @@
+# Bỏ qua thư mục build
+**/bin/
+**/obj/
+
+# Bỏ qua file cấu hình cá nhân của Visual Studio
+.vs/
+*.user
+*.suo
+
+# Bỏ qua các file tạm hệ thống
+Thumbs.db
+.DS_Store
+
+# Bỏ qua file môi trường (nếu có)
+.env
