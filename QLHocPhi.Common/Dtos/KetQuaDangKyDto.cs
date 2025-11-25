@@ -6,16 +6,13 @@ using System.Threading.Tasks;
 
 namespace QLHocPhi.Common.Dtos
 {
-    public class LopHocPhanDto
+    public class KetQuaDangKyDto
     {
         public string MaLhp { get; set; }
         public string TenLhp { get; set; }
         public string TenMonHoc { get; set; }
         public int SoTinChi { get; set; }
-        public int SiSoToiDa { get; set; }
-        public int SiSoThucTe { get; set; }
-        public string MaNganh { get; set; }
-        // Thêm thông tin để Frontend biết còn chỗ hay không
-        public string TrangThaiSlot => SiSoThucTe >= SiSoToiDa ? "Hết chỗ" : "Còn chỗ";
+        public DateTime NgayDangKy { get; set; }
+        public decimal HocPhi { get; set; }
     }
 }

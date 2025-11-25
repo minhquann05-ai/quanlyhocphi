@@ -4,7 +4,6 @@ namespace QLHocPhi.Common.Dtos
 {
     public class DangKyHocPhanCreateDto
     {
-        [Required]
         public string? MaSv { get; set; }
 
         [Required]

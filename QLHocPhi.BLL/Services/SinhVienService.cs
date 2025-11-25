@@ -23,12 +23,28 @@ namespace QLHocPhi.BLL.Services
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<SinhVienDto>> GetAllAsync()
+        public async Task<IEnumerable<SinhVienDto>> GetAllAsync(string? keyword = null)
         {
-            var list = await _context.SinhViens
+            var query = _context.SinhViens
                 .Include(sv => sv.LopHoc)
                 .AsNoTracking()
-                .ToListAsync();
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                keyword = keyword.ToLower();
+
+                // --- CẬP NHẬT LOGIC TÌM KIẾM ĐA NĂNG ---
+                // Tìm trong Mã SV, Họ Tên, Mã Lớp, Email hoặc SĐT
+                query = query.Where(sv => sv.HoTen.ToLower().Contains(keyword)
+                                       || sv.MaSv.ToLower().Contains(keyword)
+                                       || (sv.MaLop != null && sv.MaLop.ToLower().Contains(keyword))
+                                       || (sv.Email != null && sv.Email.ToLower().Contains(keyword))
+                                       || (sv.Sdt != null && sv.Sdt.Contains(keyword)));
+                // ---------------------------------------
+            }
+
+            var list = await query.ToListAsync();
             return _mapper.Map<IEnumerable<SinhVienDto>>(list);
         }
 

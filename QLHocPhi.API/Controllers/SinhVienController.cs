@@ -20,10 +20,13 @@ namespace QLHocPhi.API.Controllers
         }
 
         [HttpGet]
+        [HttpGet]
         [Authorize(Roles = "PhongTaiChinh")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllSinhVien([FromQuery] string? keyword)
         {
-            return Ok(await _sinhVienService.GetAllAsync());
+            // Truyền keyword xuống Service
+            var result = await _sinhVienService.GetAllAsync(keyword);
+            return Ok(result);
         }
 
         [HttpGet("sinhvien")]

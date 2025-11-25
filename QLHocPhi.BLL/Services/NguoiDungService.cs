@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt; 
 using Microsoft.IdentityModel.Tokens;
 using QLHocPhi.DAL.Entities;
+using AutoMapper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,7 @@ namespace QLHocPhi.BLL.Services
     public class NguoiDungService : INguoiDungService
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
         // Khóa bí mật (Nên để trong appsettings.json)
         private const string SECRET_KEY = "111111111111111111111111111111111111111111111";
 
@@ -85,7 +87,7 @@ namespace QLHocPhi.BLL.Services
 
         public async Task<int> GenerateAccountsForStudentsAsync()
         {
-            // Tìm SV chưa có tài khoản
+            // 1. Tìm SV chưa có tài khoản
             var studentsWithoutAccount = await _context.SinhViens
                 .Where(sv => !_context.NguoiDungs.Any(u => u.MaSv == sv.MaSv))
                 .ToListAsync();
@@ -93,12 +95,13 @@ namespace QLHocPhi.BLL.Services
             if (!studentsWithoutAccount.Any()) return 0;
 
             var newAccounts = new List<NguoiDung>();
+
             foreach (var sv in studentsWithoutAccount)
             {
                 newAccounts.Add(new NguoiDung
                 {
                     TenDangNhap = sv.MaSv,
-                    MatKhau = "123456", // Mặc định
+                    MatKhau = "123456",
                     VaiTro = "SinhVien",
                     MaSv = sv.MaSv
                 });
@@ -107,7 +110,7 @@ namespace QLHocPhi.BLL.Services
             await _context.NguoiDungs.AddRangeAsync(newAccounts);
             await _context.SaveChangesAsync();
 
-            return newAccounts.Count;
+            return newAccounts.Count; // Chỉ trả về số lượng
         }
 
         public async Task CreateDefaultAdminAsync()

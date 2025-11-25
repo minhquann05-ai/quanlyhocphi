@@ -34,14 +34,21 @@ namespace QLHocPhi.BLL.Mapping
                 .ForMember(dest => dest.MaHd, opt => opt.MapFrom(src => src.ThanhToan.HoaDon.MaHd))
                 .ForMember(dest => dest.TenSv, opt => opt.MapFrom(src => src.ThanhToan.HoaDon.SinhVien.HoTen));
             CreateMap<SinhVien, SinhVienDto>()
-        .ForMember(dest => dest.TenLop, opt => opt.MapFrom(src => src.LopHoc.TenLop));
+        .ForMember(dest => dest.TenLop, opt => opt.MapFrom(src => src.LopHoc != null ? src.LopHoc.TenLop : ""));
             CreateMap<SinhVienCreateDto, SinhVien>();
             CreateMap<SinhVienUpdateDto, SinhVien>();
             CreateMap<LopHocPhan, LopHocPhanDto>()
     .ForMember(dest => dest.TenMonHoc, opt => opt.MapFrom(src => src.MonHoc.TenMh))
-    .ForMember(dest => dest.SoTinChi, opt => opt.MapFrom(src => src.MonHoc.SoTinChi));
+    .ForMember(dest => dest.SoTinChi, opt => opt.MapFrom(src => src.MonHoc.SoTinChi))
+            .ForMember(dest => dest.MaNganh, opt => opt.MapFrom(src => src.MonHoc.MaNganh));
             CreateMap<LopHocPhanCreateDto, LopHocPhan>();
             CreateMap<LopHocPhanUpdateDto, LopHocPhan>();
+            CreateMap<DangKyHocPhan, KetQuaDangKyDto>()
+    .ForMember(dest => dest.MaLhp, opt => opt.MapFrom(src => src.MaLhp))
+    .ForMember(dest => dest.TenLhp, opt => opt.MapFrom(src => src.LopHocPhan.TenLhp))
+    .ForMember(dest => dest.TenMonHoc, opt => opt.MapFrom(src => src.LopHocPhan.MonHoc.TenMh))
+    .ForMember(dest => dest.SoTinChi, opt => opt.MapFrom(src => src.LopHocPhan.MonHoc.SoTinChi))
+    .ForMember(dest => dest.NgayDangKy, opt => opt.MapFrom(src => src.NgayDk));
         }
     }
 }

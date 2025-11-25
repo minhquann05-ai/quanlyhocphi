@@ -9,10 +9,11 @@ namespace QLHocPhi.BLL.Interfaces
 {
     public interface ISinhVienService
     {
-        Task<IEnumerable<SinhVienDto>> GetAllAsync();
+        Task<IEnumerable<SinhVienDto>> GetAllAsync(string? keyword = null);
         Task<SinhVienDto> GetByIdAsync(string maSv);
         Task<SinhVienDto> CreateAsync(SinhVienCreateDto createDto);
         Task UpdateAsync(string maSv, SinhVienUpdateDto updateDto);
         Task DeleteAsync(string maSv);
+        
     }
 }

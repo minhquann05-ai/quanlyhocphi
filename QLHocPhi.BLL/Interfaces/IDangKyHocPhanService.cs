@@ -6,6 +6,7 @@ namespace QLHocPhi.BLL.Interfaces
     {
         Task<HoaDonDto> CreateDangKyAsync(DangKyHocPhanCreateDto createDto);
         Task<IEnumerable<LopHocPhanDto>> GetAvailableClassesForStudentAsync(string maSv);
-        Task CancelRegistrationAsync(string maSv, string maLhp);
+        Task CancelRegistrationAsync(string maSv, string maLhp, string role = null);
+        Task<IEnumerable<KetQuaDangKyDto>> GetRegisteredClassesAsync(string maSv);
     }
 }

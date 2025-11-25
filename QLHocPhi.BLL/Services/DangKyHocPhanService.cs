@@ -189,98 +189,111 @@ namespace QLHocPhi.BLL.Services
         }
         public async Task<IEnumerable<LopHocPhanDto>> GetAvailableClassesForStudentAsync(string maSv)
         {
-            // 1. Tìm thông tin sinh viên để biết Ngành
+            // 1. Tìm thông tin sinh viên để biết họ thuộc Ngành nào
             var sinhVien = await _context.SinhViens
-                .Include(sv => sv.LopHoc) // Để lấy Mã Ngành
+                .Include(sv => sv.LopHoc) // Phải Include Lớp để lấy Mã Ngành
                 .AsNoTracking()
                 .FirstOrDefaultAsync(sv => sv.MaSv == maSv);
 
-            if (sinhVien == null || sinhVien.LopHoc == null)
-                throw new Exception("Không tìm thấy thông tin ngành học của sinh viên.");
+            if (sinhVien == null)
+            {
+                throw new Exception("Không tìm thấy thông tin sinh viên.");
+            }
 
-            string maNganhCuaSv = sinhVien.LopHoc.MaNganh;
+            // Kiểm tra nếu sinh viên chưa được phân lớp hoặc lớp chưa có ngành
+            if (sinhVien.LopHoc == null || string.IsNullOrEmpty(sinhVien.LopHoc.MaNganh))
+            {
+                // Trả về danh sách rỗng hoặc chỉ môn NHC tùy chính sách
+                // Ở đây ta báo lỗi để admin biết mà phân lớp
+                throw new Exception("Sinh viên chưa được phân vào lớp chuyên ngành nào, không thể xác định môn học được phép đăng ký.");
+            }
+
+            string maNganhCuaSv = sinhVien.LopHoc.MaNganh; // Ví dụ: "CNTT"
 
             // 2. Tìm Học kỳ đang mở ("Chuẩn bị mở")
-            // (Vì khi đăng ký là đăng ký cho kỳ sắp tới)
             var activeHocKy = await _context.HocKys
                 .AsNoTracking()
                 .FirstOrDefaultAsync(hk => hk.TrangThai == "Chuẩn bị mở");
 
-            if (activeHocKy == null) return new List<LopHocPhanDto>(); // Không có kỳ nào mở
+            if (activeHocKy == null)
+            {
+                return new List<LopHocPhanDto>(); // Không có kỳ nào mở thì danh sách trống
+            }
 
-            // 3. Truy vấn các lớp học phần thỏa mãn 2 điều kiện:
-            // - Thuộc học kỳ đang mở
-            // - Môn học thuộc ngành của sinh viên (hoặc môn chung "NHC")
+            // 3. Truy vấn và Lọc dữ liệu
             var lopHocPhans = await _context.LopHocPhans
                 .Include(lhp => lhp.MonHoc)
-                .Where(lhp => lhp.MaHk == activeHocKy.MaHk // Đúng kỳ
-                           && (lhp.MonHoc.MaNganh == maNganhCuaSv || lhp.MonHoc.MaNganh == "NHC")) // Đúng ngành hoặc môn chung
-                .OrderBy(lhp => lhp.MonHoc.TenMh)
+                .Where(lhp =>
+                    // Điều kiện 1: Phải thuộc học kỳ đang mở
+                    lhp.MaHk == activeHocKy.MaHk
+                    &&
+                    // Điều kiện 2: Môn học phải thuộc Ngành của SV HOẶC là Ngành học chung (NHC)
+                    (lhp.MonHoc.MaNganh == maNganhCuaSv || lhp.MonHoc.MaNganh == "NHC")
+                )
+                .OrderBy(lhp => lhp.MonHoc.TenMh) // Sắp xếp theo tên môn cho dễ nhìn
                 .AsNoTracking()
                 .ToListAsync();
 
             return _mapper.Map<IEnumerable<LopHocPhanDto>>(lopHocPhans);
         }
-        public async Task CancelRegistrationAsync(string maSv, string maLhp)
+        public async Task CancelRegistrationAsync(string maSv, string maLhp, string role = null)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 // 1. Tìm bản ghi đăng ký
                 var dangKy = await _context.DangKyHocPhans
-                    .Include(dk => dk.LopHocPhan) // Để lấy tên lớp (so khớp hóa đơn)
+                    .Include(dk => dk.LopHocPhan)
                     .FirstOrDefaultAsync(dk => dk.MaSv == maSv && dk.MaLhp == maLhp);
 
                 if (dangKy == null)
                     throw new KeyNotFoundException("Bạn chưa đăng ký lớp học phần này.");
 
-                // 2. Tìm Hóa đơn của học kỳ đó
-                // (Giả định mỗi kỳ sinh viên chỉ có 1 hóa đơn học phí chính)
+                // 2. Tìm Hóa đơn
                 var hoaDon = await _context.HoaDons
                     .Include(hd => hd.ChiTietHoaDons)
                     .FirstOrDefaultAsync(hd => hd.MaSv == maSv && hd.MaHk == dangKy.MaHk);
 
-                // 3. Kiểm tra trạng thái thanh toán
+                // 3. Kiểm tra trạng thái thanh toán (LOGIC MỚI)
                 if (hoaDon != null)
                 {
-                    if (hoaDon.TrangThai == "Đã thanh toán")
+                    // Chỉ chặn nếu là Sinh Viên và Hóa đơn đã thanh toán
+                    // Nếu là Phòng Tài Chính (role == "PhongTaiChinh") thì cho qua luôn
+                    if (hoaDon.TrangThai == "Đã thanh toán" && role != "PhongTaiChinh")
                     {
                         throw new Exception("Không thể hủy lớp này vì bạn ĐÃ THANH TOÁN học phí. Vui lòng liên hệ Phòng Tài Chính để được hỗ trợ hoàn tiền.");
                     }
 
-                    // 4. Tìm và Xóa dòng tiền trong chi tiết hóa đơn
-                    // (Dựa vào chuỗi nội dung chúng ta đã tạo: "Học phí lớp: {TenLhp}...")
+                    // ... (Phần xóa tiền trong hóa đơn giữ nguyên) ...
+                    // Copy đoạn code tìm và xóa chi tiết hóa đơn cũ vào đây
                     var chiTietToRemove = hoaDon.ChiTietHoaDons
                         .FirstOrDefault(ct => ct.NoiDung.Contains(dangKy.LopHocPhan.TenLhp));
 
                     if (chiTietToRemove != null)
                     {
-                        // Trừ tiền
                         hoaDon.TongTien -= chiTietToRemove.SoTien;
                         if (hoaDon.TongTien < 0) hoaDon.TongTien = 0;
-
-                        // Xóa chi tiết
                         _context.ChiTietHoaDons.Remove(chiTietToRemove);
                     }
 
-                    // Nếu hóa đơn không còn đồng nào (do hủy hết môn) -> Xóa luôn hóa đơn cho sạch
-                    // (Logic: Nếu list chi tiết chỉ còn đúng 1 cái mình vừa xóa)
+                    // Nếu hủy xong mà hóa đơn rỗng -> Xóa luôn hóa đơn (hoặc cập nhật trạng thái nếu Admin muốn)
                     if (hoaDon.ChiTietHoaDons.Count <= 1 && chiTietToRemove != null)
                     {
                         _context.HoaDons.Remove(hoaDon);
                     }
+                    // Nếu Admin hủy hóa đơn đã thanh toán -> Có thể cần cập nhật lại trạng thái hóa đơn về "Chưa thanh toán" hoặc xử lý hoàn tiền (tùy nghiệp vụ sâu hơn)
+                    // Ở mức độ này, ta cứ trừ tiền bình thường.
                 }
 
-                // 5. Cập nhật Sĩ số lớp (-1)
+                // ... (Phần giảm sĩ số và xóa đăng ký giữ nguyên) ...
                 var lopHocPhan = await _context.LopHocPhans.FindAsync(maLhp);
                 if (lopHocPhan != null)
                 {
                     lopHocPhan.SiSoThucTe--;
-                    if (lopHocPhan.SiSoThucTe < 0) lopHocPhan.SiSoThucTe = 0; // An toàn
+                    if (lopHocPhan.SiSoThucTe < 0) lopHocPhan.SiSoThucTe = 0;
                     _context.LopHocPhans.Update(lopHocPhan);
                 }
 
-                // 6. Xóa bản ghi Đăng ký
                 _context.DangKyHocPhans.Remove(dangKy);
 
                 await _context.SaveChangesAsync();
@@ -291,6 +304,47 @@ namespace QLHocPhi.BLL.Services
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+        public async Task<IEnumerable<KetQuaDangKyDto>> GetRegisteredClassesAsync(string maSv)
+        {
+            // 1. Tìm học kỳ đang mở (Chỉ xem kết quả của kỳ hiện tại)
+            var activeHocKy = await _context.HocKys
+                .AsNoTracking()
+                .FirstOrDefaultAsync(hk => hk.TrangThai == "Chuẩn bị mở");
+
+            if (activeHocKy == null) return new List<KetQuaDangKyDto>();
+
+            // 2. Lấy danh sách lớp SV đã đăng ký trong kỳ này
+            var listDangKy = await _context.DangKyHocPhans
+                .Include(dk => dk.LopHocPhan)
+                    .ThenInclude(l => l.MonHoc)
+                .Where(dk => dk.MaSv == maSv && dk.MaHk == activeHocKy.MaHk)
+                .OrderBy(dk => dk.NgayDk)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var result = _mapper.Map<List<KetQuaDangKyDto>>(listDangKy);
+
+            // 3. Tính học phí (Optional: Để hiển thị cho đẹp)
+            // Lấy biểu phí của kỳ này để tính tiền từng môn
+            var listBieuPhi = await _context.BieuPhis
+                .Where(bp => bp.MaHk == activeHocKy.MaHk)
+                .ToListAsync();
+
+            foreach (var item in result)
+            {
+                // Tìm lại môn học để biết thuộc ngành nào -> Lấy giá
+                // (Cách nhanh nhất là query lại hoặc map thêm MaNganh vào DTO, ở đây làm nhanh)
+                var monHoc = listDangKy.First(x => x.MaLhp == item.MaLhp).LopHocPhan.MonHoc;
+                var bieuPhi = listBieuPhi.FirstOrDefault(bp => bp.MaNganh == monHoc.MaNganh);
+
+                if (bieuPhi != null)
+                {
+                    item.HocPhi = item.SoTinChi * bieuPhi.DonGiaTinChi;
+                }
+            }
+
+            return result;
         }
     }
 }

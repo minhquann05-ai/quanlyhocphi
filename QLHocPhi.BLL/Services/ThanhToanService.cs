@@ -45,6 +45,10 @@ namespace QuanLyHocPhi.BLL.Services
 
                 if (hoaDon.TongTien != createDto.SoTienTt)
                     throw new Exception("Số tiền thanh toán không khớp với tổng tiền của hóa đơn.");
+                if (hoaDon.NgayTao.HasValue)
+                {
+                    hoaDon.NgayTao = DateTime.SpecifyKind(hoaDon.NgayTao.Value, DateTimeKind.Utc);
+                }
 
                 var thanhToan = _mapper.Map<ThanhToan>(createDto);
                 thanhToan.NgayTt = DateTime.UtcNow;

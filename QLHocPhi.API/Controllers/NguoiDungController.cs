@@ -87,6 +87,7 @@ namespace QLHocPhi.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
         [HttpPost("create-admin-default")]
         [AllowAnonymous]
         public async Task<IActionResult> CreateDefaultAdmin()

@@ -66,16 +66,33 @@ namespace QLHocPhi.API.Controllers
             }
         }
         [HttpGet("available-classes")]
-        [Authorize(Roles = "SinhVien")] // Chỉ sinh viên mới cần lấy danh sách này để đăng ký
-        public async Task<IActionResult> GetAvailableClasses()
+        [Authorize(Roles = "SinhVien,PhongTaiChinh")] // <--- Mở quyền cho cả Admin
+        public async Task<IActionResult> GetAvailableClasses([FromQuery] string? maSv)
         {
             try
             {
-                // Tự động lấy mã SV từ Token
-                var maSv = User.FindFirst("MaSv")?.Value;
-                if (string.IsNullOrEmpty(maSv)) return Unauthorized();
+                // 1. Lấy thông tin người dùng
+                var role = User.FindFirst(ClaimTypes.Role)?.Value;
+                var tokenMaSv = User.FindFirst("MaSv")?.Value;
+                string targetMaSv = maSv;
 
-                var listLop = await _dangKyHocPhanService.GetAvailableClassesForStudentAsync(maSv);
+                // 2. Phân quyền chọn Mã SV
+                if (role == "SinhVien")
+                {
+                    targetMaSv = tokenMaSv; // Sinh viên bắt buộc dùng mã của mình
+                }
+                else // Admin
+                {
+                    if (string.IsNullOrEmpty(targetMaSv))
+                    {
+                        return BadRequest("Vui lòng nhập Mã sinh viên cần đăng ký.");
+                    }
+                }
+
+                if (string.IsNullOrEmpty(targetMaSv)) return Unauthorized();
+
+                // 3. Gọi Service
+                var listLop = await _dangKyHocPhanService.GetAvailableClassesForStudentAsync(targetMaSv);
                 return Ok(listLop);
             }
             catch (Exception ex)
@@ -84,33 +101,76 @@ namespace QLHocPhi.API.Controllers
             }
         }
         [HttpDelete]
-        [Authorize(Roles = "PhongTaiChinh,SinhVien")] // Cả 2 đều được
+        [Authorize(Roles = "PhongTaiChinh,SinhVien")]
         public async Task<IActionResult> CancelRegistration([FromQuery] string maLhp, [FromQuery] string? maSv)
         {
             try
             {
-                // 1. Logic phân quyền lấy MaSv (Giống hệt lúc tạo)
+                // 1. Lấy Role và Mã SV
                 var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
                 var tokenMaSv = User.FindFirst("MaSv")?.Value;
                 string targetMaSv = maSv;
 
                 if (role == "SinhVien")
                 {
-                    targetMaSv = tokenMaSv; // Sinh viên chỉ được hủy của mình
+                    targetMaSv = tokenMaSv;
                 }
                 else if (string.IsNullOrEmpty(targetMaSv))
                 {
                     return BadRequest("Vui lòng nhập mã sinh viên cần hủy.");
                 }
 
-                // 2. Gọi Service
-                await _dangKyHocPhanService.CancelRegistrationAsync(targetMaSv, maLhp);
+                // 2. Gọi Service (Truyền thêm Role)
+                await _dangKyHocPhanService.CancelRegistrationAsync(targetMaSv, maLhp, role);
 
                 return Ok(new { message = $"Đã hủy đăng ký lớp {maLhp} thành công." });
             }
             catch (KeyNotFoundException ex)
             {
                 return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+        /// <summary>
+        /// Xem danh sách môn đã đăng ký
+        /// - Sinh viên: Tự động lấy của mình
+        /// - Admin: Phải truyền ?maSv=...
+        /// </summary>
+        [HttpGet("registered")]
+        [Authorize(Roles = "SinhVien,PhongTaiChinh")] // <--- Cho phép cả Admin
+        public async Task<IActionResult> GetRegisteredClasses([FromQuery] string? maSv)
+        {
+            try
+            {
+                // 1. Lấy thông tin người dùng
+                var role = User.FindFirst(ClaimTypes.Role)?.Value;
+                var tokenMaSv = User.FindFirst("MaSv")?.Value;
+
+                string targetMaSv = maSv;
+
+                // 2. Logic phân quyền chọn Mã SV
+                if (role == "SinhVien")
+                {
+                    // Nếu là SV: Bắt buộc dùng mã trong Token
+                    targetMaSv = tokenMaSv;
+                }
+                else if (role == "PhongTaiChinh")
+                {
+                    // Nếu là Admin: Bắt buộc phải có tham số maSv gửi lên
+                    if (string.IsNullOrEmpty(targetMaSv))
+                    {
+                        return BadRequest("Vui lòng nhập mã sinh viên cần xem kết quả.");
+                    }
+                }
+
+                if (string.IsNullOrEmpty(targetMaSv)) return Unauthorized();
+
+                // 3. Gọi Service
+                var result = await _dangKyHocPhanService.GetRegisteredClassesAsync(targetMaSv);
+                return Ok(result);
             }
             catch (Exception ex)
             {
