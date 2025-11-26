@@ -23,25 +23,39 @@ namespace QLHocPhi.BLL.Services
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<SinhVienDto>> GetAllAsync(string? keyword = null)
+        public async Task<IEnumerable<SinhVienDto>> GetAllAsync(SinhVienSearchDto searchDto)
         {
             var query = _context.SinhViens
                 .Include(sv => sv.LopHoc)
                 .AsNoTracking()
                 .AsQueryable();
 
-            if (!string.IsNullOrEmpty(keyword))
+            if (searchDto != null)
             {
-                keyword = keyword.ToLower();
+                // Lọc theo từng tiêu chí (nếu có nhập)
+                if (!string.IsNullOrEmpty(searchDto.MaSv))
+                    query = query.Where(sv => sv.MaSv.ToLower().Contains(searchDto.MaSv.ToLower()));
 
-                // --- CẬP NHẬT LOGIC TÌM KIẾM ĐA NĂNG ---
-                // Tìm trong Mã SV, Họ Tên, Mã Lớp, Email hoặc SĐT
-                query = query.Where(sv => sv.HoTen.ToLower().Contains(keyword)
-                                       || sv.MaSv.ToLower().Contains(keyword)
-                                       || (sv.MaLop != null && sv.MaLop.ToLower().Contains(keyword))
-                                       || (sv.Email != null && sv.Email.ToLower().Contains(keyword))
-                                       || (sv.Sdt != null && sv.Sdt.Contains(keyword)));
-                // ---------------------------------------
+                if (!string.IsNullOrEmpty(searchDto.HoTen))
+                {
+                    string k = searchDto.HoTen.ToLower().Trim();
+                    query = query.Where(sv =>
+                   sv.HoTen.ToLower() == k
+                || sv.HoTen.ToLower().StartsWith(k + " ")
+                || sv.HoTen.ToLower().EndsWith(" " + k));
+                }
+                
+
+                if (!string.IsNullOrEmpty(searchDto.MaLop))
+                    query = query.Where(sv => sv.MaLop.ToLower().Contains(searchDto.MaLop.ToLower()));
+
+                if (!string.IsNullOrEmpty(searchDto.Email))
+                    query = query.Where(sv => sv.Email.ToLower().Contains(searchDto.Email.ToLower()));
+
+                if (!string.IsNullOrEmpty(searchDto.Sdt))
+                    query = query.Where(sv => sv.Sdt.Contains(searchDto.Sdt));
+                if (!string.IsNullOrEmpty(searchDto.GioiTinh))
+                    query = query.Where(sv => sv.GioiTinh.ToLower().Contains(searchDto.GioiTinh.ToLower()));
             }
 
             var list = await query.ToListAsync();

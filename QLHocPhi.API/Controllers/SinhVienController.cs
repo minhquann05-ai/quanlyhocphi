@@ -19,13 +19,19 @@ namespace QLHocPhi.API.Controllers
             _sinhVienService = sinhVienService;
         }
 
-        [HttpGet]
+        [HttpPost("search")]
+        [Authorize(Roles = "PhongTaiChinh")]
+        public async Task<IActionResult> SearchSinhVien([FromBody] SinhVienSearchDto searchDto)
+        {
+            var result = await _sinhVienService.GetAllAsync(searchDto);
+            return Ok(result);
+        }
         [HttpGet]
         [Authorize(Roles = "PhongTaiChinh")]
-        public async Task<IActionResult> GetAllSinhVien([FromQuery] string? keyword)
+        public async Task<IActionResult> GetAllSinhVien([FromQuery] SinhVienSearchDto searchDto)
         {
             // Truyền keyword xuống Service
-            var result = await _sinhVienService.GetAllAsync(keyword);
+            var result = await _sinhVienService.GetAllAsync(searchDto);
             return Ok(result);
         }
 
