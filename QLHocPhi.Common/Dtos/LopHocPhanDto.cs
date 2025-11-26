@@ -14,6 +14,8 @@ namespace QLHocPhi.Common.Dtos
         public int SoTinChi { get; set; }
         public int SiSoToiDa { get; set; }
         public int SiSoThucTe { get; set; }
+        public string MaMh { get; set; }
+        public string MaHk { get; set; }
         public string MaNganh { get; set; }
         // Thêm thông tin để Frontend biết còn chỗ hay không
         public string TrangThaiSlot => SiSoThucTe >= SiSoToiDa ? "Hết chỗ" : "Còn chỗ";
