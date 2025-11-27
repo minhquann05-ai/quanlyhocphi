@@ -86,18 +86,72 @@ namespace QLHocPhi.BLL.Services
 
         public async Task DeleteAsync(string maLhp)
         {
-            var lopHocPhan = await _context.LopHocPhans.FindAsync(maLhp);
-            if (lopHocPhan == null) throw new KeyNotFoundException("Lớp học phần không tồn tại.");
-
-            // Kiểm tra ràng buộc: Nếu đã có sinh viên đăng ký thì không cho xóa
-            bool hasStudents = await _context.DangKyHocPhans.AnyAsync(dk => dk.MaLhp == maLhp);
-            if (hasStudents)
+            // Dùng Transaction để đảm bảo xóa sạch sẽ hoặc không xóa gì cả
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                throw new Exception("Không thể xóa lớp này vì đã có sinh viên đăng ký.");
-            }
+                // 1. Tìm lớp học phần và nạp luôn danh sách đăng ký
+                var lopHocPhan = await _context.LopHocPhans
+                    .Include(l => l.DangKyHocPhans) // Lấy luôn danh sách SV đăng ký
+                    .FirstOrDefaultAsync(l => l.MaLhp == maLhp);
 
-            _context.LopHocPhans.Remove(lopHocPhan);
-            await _context.SaveChangesAsync();
+                if (lopHocPhan == null) throw new KeyNotFoundException("Lớp học phần không tồn tại.");
+
+                // 2. XỬ LÝ CÁC SINH VIÊN ĐANG ĐĂNG KÝ (Nếu có)
+                if (lopHocPhan.DangKyHocPhans != null && lopHocPhan.DangKyHocPhans.Count > 0)
+                {
+                    // Lặp qua từng bản ghi đăng ký để xử lý Hóa đơn
+                    foreach (var dangKy in lopHocPhan.DangKyHocPhans.ToList())
+                    {
+                        // Tìm Hóa đơn của sinh viên đó trong học kỳ này
+                        var hoaDon = await _context.HoaDons
+                            .Include(hd => hd.ChiTietHoaDons)
+                            .FirstOrDefaultAsync(hd => hd.MaSv == dangKy.MaSv && hd.MaHk == dangKy.MaHk);
+
+                        if (hoaDon != null)
+                        {
+                            // Tìm dòng chi tiết hóa đơn tương ứng với lớp này để trừ tiền
+                            // (Dựa vào nội dung hoặc logic nào đó. Ở đây ta tìm theo tên lớp trong nội dung)
+                            var chiTietToRemove = hoaDon.ChiTietHoaDons
+                                .FirstOrDefault(ct => ct.NoiDung.Contains(lopHocPhan.TenLhp));
+
+                            if (chiTietToRemove != null)
+                            {
+                                // Trừ tiền
+                                hoaDon.TongTien -= chiTietToRemove.SoTien;
+                                if (hoaDon.TongTien < 0) hoaDon.TongTien = 0;
+
+                                // Xóa dòng chi tiết
+                                _context.ChiTietHoaDons.Remove(chiTietToRemove);
+                            }
+
+                            // Nếu hóa đơn hết tiền và hết chi tiết -> Xóa luôn hóa đơn cho gọn
+                            if (hoaDon.ChiTietHoaDons.Count == 0)
+                            {
+                                _context.HoaDons.Remove(hoaDon);
+                            }
+                            else
+                            {
+                                _context.HoaDons.Update(hoaDon);
+                            }
+                        }
+
+                        // Xóa bản ghi đăng ký
+                        _context.DangKyHocPhans.Remove(dangKy);
+                    }
+                }
+
+                // 3. Xóa Lớp học phần
+                _context.LopHocPhans.Remove(lopHocPhan);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

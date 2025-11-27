@@ -45,5 +45,6 @@ namespace QLHocPhi.DAL.Entities
 
         [ForeignKey("MaHk")]
         public virtual HocKy? HocKy { get; set; }
+        public virtual ICollection<DangKyHocPhan> DangKyHocPhans { get; set; }
     }
 }
