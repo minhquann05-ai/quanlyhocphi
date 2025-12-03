@@ -17,11 +17,6 @@ namespace QLHocPhi.API.Controllers
             _lopHocPhanService = lopHocPhanService;
         }
 
-        // --- NHÓM XEM (Cả 2 quyền) ---
-
-        /// <summary>
-        /// Xem tất cả lớp học phần
-        /// </summary>
         [HttpGet]
         [Authorize(Roles = "PhongTaiChinh,SinhVien")]
         public async Task<IActionResult> GetAll()
@@ -29,9 +24,6 @@ namespace QLHocPhi.API.Controllers
             return Ok(await _lopHocPhanService.GetAllAsync());
         }
 
-        /// <summary>
-        /// Xem lớp học phần theo Ngành (VD: CNTT)
-        /// </summary>
         [HttpGet("nganh/{maNganh}")]
         [Authorize(Roles = "PhongTaiChinh,SinhVien")]
         public async Task<IActionResult> GetByNganh(string maNganh)
@@ -39,11 +31,6 @@ namespace QLHocPhi.API.Controllers
             return Ok(await _lopHocPhanService.GetByNganhAsync(maNganh));
         }
 
-        // --- NHÓM QUẢN LÝ (Chỉ Phòng Tài Chính) ---
-
-        /// <summary>
-        /// Thêm lớp học phần mới
-        /// </summary>
         [HttpPost]
         [Authorize(Roles = "PhongTaiChinh")]
         public async Task<IActionResult> Create([FromBody] LopHocPhanCreateDto dto)
@@ -60,9 +47,6 @@ namespace QLHocPhi.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Sửa thông tin lớp (Tên, Sĩ số max, Trạng thái)
-        /// </summary>
         [HttpPut("{maLhp}")]
         [Authorize(Roles = "PhongTaiChinh")]
         public async Task<IActionResult> Update(string maLhp, [FromBody] LopHocPhanUpdateDto dto)
@@ -79,9 +63,6 @@ namespace QLHocPhi.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Xóa lớp học phần (Chỉ xóa được khi chưa có ai đăng ký)
-        /// </summary>
         [HttpDelete("{maLhp}")]
         [Authorize(Roles = "PhongTaiChinh")]
         public async Task<IActionResult> Delete(string maLhp)
@@ -90,6 +71,20 @@ namespace QLHocPhi.API.Controllers
             {
                 await _lopHocPhanService.DeleteAsync(maLhp);
                 return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+        [HttpDelete("{maLhp}/students")]
+        [Authorize(Roles = "PhongTaiChinh")]
+        public async Task<IActionResult> RemoveAllStudents(string maLhp)
+        {
+            try
+            {
+                await _lopHocPhanService.RemoveAllStudentsAsync(maLhp);
+                return Ok(new { message = $"Đã hủy toàn bộ sinh viên của lớp {maLhp}. Sĩ số đã về 0." });
             }
             catch (Exception ex)
             {

@@ -61,7 +61,7 @@ namespace QuanLyHocPhi.BLL.Services
         {
             var list = await _context.BienLais
                 .Include(bl => bl.ThanhToan.HoaDon)
-                .ThenInclude(hd => hd.SinhVien)// Include để lấy MaHd
+                .ThenInclude(hd => hd.SinhVien)    
                 .AsNoTracking()
                 .ToListAsync();
             return _mapper.Map<IEnumerable<BienLaiDto>>(list);
@@ -70,26 +70,22 @@ namespace QuanLyHocPhi.BLL.Services
         public async Task<IEnumerable<BienLaiDto>> GetByMaSvAsync(string maSv)
         {
             var list = await _context.BienLais
-                .Where(bl => bl.ThanhToan.HoaDon.MaSv == maSv) // Lọc theo SV
+                .Where(bl => bl.ThanhToan.HoaDon.MaSv == maSv)    
                 .Include(bl => bl.ThanhToan.HoaDon)
                 .ThenInclude(hd => hd.SinhVien)
                 .AsNoTracking()
                 .ToListAsync();
             return _mapper.Map<IEnumerable<BienLaiDto>>(list);
         }
-        // -------------------
         public async Task<int> SyncMissingBienLaiAsync()
         {
             int count = 0;
 
-            // 1. Lấy tất cả hóa đơn "Đã thanh toán" nhưng CHƯA CÓ Biên lai
-            // (Logic: Tìm HD đã thanh toán, kiểm tra xem có ThanhToan chưa, nếu có thì kiểm tra BienLai)
             var paidInvoices = await _context.HoaDons
                 .Where(hd => hd.TrangThai == "Đã thanh toán")
-                .Include(hd => hd.SinhVien) // Để lấy tên in vào nội dung
+                .Include(hd => hd.SinhVien)        
                 .ToListAsync();
 
-            // Lấy ID cuối cùng để tạo mã tiếp theo (tránh trùng)
             var lastTt = await _context.ThanhToans.OrderByDescending(x => x.MaTt).FirstOrDefaultAsync();
             var lastBl = await _context.BienLais.OrderByDescending(x => x.MaBl).FirstOrDefaultAsync();
 
@@ -101,28 +97,23 @@ namespace QuanLyHocPhi.BLL.Services
 
             foreach (var hd in paidInvoices)
             {
-                // Bước A: Kiểm tra/Tạo ThanhToan
                 var thanhToan = await _context.ThanhToans.FirstOrDefaultAsync(tt => tt.MaHd == hd.MaHd);
 
                 if (thanhToan == null)
                 {
-                    // Nếu chưa có ThanhToan -> Tạo giả 1 cái
                     thanhToan = new ThanhToan
                     {
                         MaTt = $"TT{nextTtId:D4}",
                         MaHd = hd.MaHd,
-                        NgayTt = hd.NgayTao ?? DateTime.UtcNow, // Lấy ngày hóa đơn làm ngày trả
+                        NgayTt = hd.NgayTao ?? DateTime.UtcNow,        
                         SoTienTt = hd.TongTien,
-                        PhuongThuc = "Tiền mặt (Bổ sung)", // Đánh dấu là dữ liệu bổ sung
+                        PhuongThuc = "Tiền mặt (Bổ sung)",        
                         TrangThaiTt = "Thành công"
                     };
                     _context.ThanhToans.Add(thanhToan);
                     nextTtId++;
                 }
 
-                // Bước B: Kiểm tra/Tạo BienLai
-                // Lưu ý: Nếu vừa tạo thanhToan ở trên thì chắc chắn chưa có biên lai trong DB
-                // Nhưng phải check trong context xem đã add chưa
                 var bienLai = await _context.BienLais.FirstOrDefaultAsync(bl => bl.MaTt == thanhToan.MaTt);
 
                 if (bienLai == null)

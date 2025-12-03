@@ -2,8 +2,8 @@
 using QLHocPhi.BLL.PdfTemplates;
 using QLHocPhi.Common.Dtos;
 using QLHocPhi.DAL;
-using Microsoft.EntityFrameworkCore; 
-using QuestPDF.Fluent;              
+using Microsoft.EntityFrameworkCore;
+using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using System;
 using System.Collections.Generic;
@@ -22,23 +22,36 @@ namespace QLHocPhi.BLL.Services
             _context = context;
         }
 
-        public async Task<byte[]> ExportBaoCaoCongNoPdfAsync(string maHk)
+        public async Task<List<BaoCaoCongNoDto>> GetListBaoCaoAsync(string maHk, string? maSv)
         {
-            // 1. Lấy tên học kỳ
-            var hocKy = await _context.HocKys.FindAsync(maHk);
-            if (hocKy == null) throw new Exception("Học kỳ không tồn tại");
-
-            // 2. Truy vấn dữ liệu: Lấy hóa đơn chưa thanh toán của học kỳ đó
-            var query = await _context.HoaDons
-                .Where(hd => hd.MaHk == maHk && hd.TrangThai == "Chưa thanh toán")
+            var query = _context.HoaDons
+                .Where(hd => hd.TrangThai == "Chưa thanh toán")
                 .Include(hd => hd.SinhVien)
                     .ThenInclude(sv => sv.LopHoc)
-                .OrderBy(hd => hd.SinhVien.MaLop) // Sắp xếp theo lớp
-                .AsNoTracking()
-                .ToListAsync();
+                .AsQueryable();            
 
-            // 3. Chuyển sang DTO cho báo cáo
-            var dataReport = query.Select((hd, index) => new BaoCaoCongNoDto
+            if (!string.IsNullOrEmpty(maHk))
+            {
+                if (maHk.StartsWith("HK"))
+                {
+                    query = query.Where(hd => hd.MaHk == maHk);
+                }
+                else
+                {
+                    query = query.Where(hd => hd.MaHk.Contains(maHk));
+                }
+            }
+
+            if (!string.IsNullOrEmpty(maSv))
+            {
+                query = query.Where(hd => hd.MaSv.Contains(maSv));
+            }
+
+            query = query.OrderBy(hd => hd.SinhVien.MaLop).ThenBy(hd => hd.MaSv);
+
+            var listData = await query.AsNoTracking().ToListAsync();
+
+            var result = listData.Select((hd, index) => new BaoCaoCongNoDto
             {
                 Stt = index + 1,
                 MaSv = hd.MaSv,
@@ -48,8 +61,17 @@ namespace QLHocPhi.BLL.Services
                 SoTienNo = hd.TongTien ?? 0
             }).ToList();
 
-            // 4. Tạo PDF
-            var document = new BaoCaoCongNoTemplate(dataReport, hocKy.TenHk);
+            return result;
+        }
+
+        public async Task<byte[]> ExportBaoCaoCongNoPdfAsync(string maHk)
+        {
+            var hocKy = await _context.HocKys.FindAsync(maHk);
+            string tenHocKy = hocKy?.TenHk ?? maHk;          
+
+            var dataReport = await GetListBaoCaoAsync(maHk, null);
+
+            var document = new BaoCaoCongNoTemplate(dataReport, tenHocKy);
             return document.GeneratePdf();
         }
     }

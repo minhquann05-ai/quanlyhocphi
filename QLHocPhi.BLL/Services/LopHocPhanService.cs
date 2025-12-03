@@ -17,10 +17,13 @@ namespace QLHocPhi.BLL.Services
         private readonly AppDbContext _context;
         private readonly IMapper _mapper;
 
-        public LopHocPhanService(AppDbContext context, IMapper mapper)
+        private readonly IDangKyHocPhanService _dangKyService;
+
+        public LopHocPhanService(AppDbContext context, IMapper mapper, IDangKyHocPhanService dangKyService)
         {
             _context = context;
             _mapper = mapper;
+            _dangKyService = dangKyService;
         }
 
         public async Task<IEnumerable<LopHocPhanDto>> GetAllAsync()
@@ -34,7 +37,6 @@ namespace QLHocPhi.BLL.Services
 
         public async Task<IEnumerable<LopHocPhanDto>> GetByNganhAsync(string maNganh)
         {
-            // Lọc các lớp học phần mà Môn học của nó thuộc Ngành đó
             var list = await _context.LopHocPhans
                 .Include(l => l.MonHoc)
                 .Where(l => l.MonHoc.MaNganh == maNganh)
@@ -45,24 +47,21 @@ namespace QLHocPhi.BLL.Services
 
         public async Task<LopHocPhanDto> CreateAsync(LopHocPhanCreateDto createDto)
         {
-            // 1. Kiểm tra trùng mã
             if (await _context.LopHocPhans.AnyAsync(l => l.MaLhp == createDto.MaLhp))
                 throw new Exception($"Mã lớp học phần {createDto.MaLhp} đã tồn tại.");
 
-            // 2. Kiểm tra Môn học và Học kỳ có tồn tại không
             if (!await _context.MonHocs.AnyAsync(m => m.MaMh == createDto.MaMh))
                 throw new KeyNotFoundException("Mã môn học không tồn tại.");
             if (!await _context.HocKys.AnyAsync(h => h.MaHk == createDto.MaHk))
                 throw new KeyNotFoundException("Mã học kỳ không tồn tại.");
 
             var lopHocPhan = _mapper.Map<LopHocPhan>(createDto);
-            lopHocPhan.SiSoThucTe = 0; // Mới tạo thì chưa có ai
+            lopHocPhan.SiSoThucTe = 0;       
             lopHocPhan.TrangThai = "Đang mở";
 
             _context.LopHocPhans.Add(lopHocPhan);
             await _context.SaveChangesAsync();
 
-            // Load lại MonHoc để map tên ra DTO trả về
             await _context.Entry(lopHocPhan).Reference(l => l.MonHoc).LoadAsync();
             return _mapper.Map<LopHocPhanDto>(lopHocPhan);
         }
@@ -72,7 +71,6 @@ namespace QLHocPhi.BLL.Services
             var lopHocPhan = await _context.LopHocPhans.FindAsync(maLhp);
             if (lopHocPhan == null) throw new KeyNotFoundException("Lớp học phần không tồn tại.");
 
-            // Chỉ cho phép cập nhật Tên, Sĩ số max, Trạng thái
             _mapper.Map(updateDto, lopHocPhan);
 
             if (updateDto.SiSoThucTe.HasValue)
@@ -86,72 +84,46 @@ namespace QLHocPhi.BLL.Services
 
         public async Task DeleteAsync(string maLhp)
         {
-            // Dùng Transaction để đảm bảo xóa sạch sẽ hoặc không xóa gì cả
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            var lopHocPhan = await _context.LopHocPhans.FindAsync(maLhp);
+            if (lopHocPhan == null) throw new KeyNotFoundException("Lớp học phần không tồn tại.");
+
+            bool hasStudents = await _context.DangKyHocPhans.AnyAsync(dk => dk.MaLhp == maLhp);
+            if (hasStudents)
             {
-                // 1. Tìm lớp học phần và nạp luôn danh sách đăng ký
-                var lopHocPhan = await _context.LopHocPhans
-                    .Include(l => l.DangKyHocPhans) // Lấy luôn danh sách SV đăng ký
-                    .FirstOrDefaultAsync(l => l.MaLhp == maLhp);
+                throw new Exception("Không thể xóa lớp này vì đã có sinh viên đăng ký.");
+            }
 
-                if (lopHocPhan == null) throw new KeyNotFoundException("Lớp học phần không tồn tại.");
+            _context.LopHocPhans.Remove(lopHocPhan);
+            await _context.SaveChangesAsync();
+        }
+        public async Task RemoveAllStudentsAsync(string maLhp)
+        {
+                var listDangKy = await _context.DangKyHocPhans
+                    .Where(dk => dk.MaLhp == maLhp)
+                    .AsNoTracking() 
+                    .ToListAsync();
 
-                // 2. XỬ LÝ CÁC SINH VIÊN ĐANG ĐĂNG KÝ (Nếu có)
-                if (lopHocPhan.DangKyHocPhans != null && lopHocPhan.DangKyHocPhans.Count > 0)
+                if (listDangKy.Count == 0) return;
+
+                foreach (var dk in listDangKy)
                 {
-                    // Lặp qua từng bản ghi đăng ký để xử lý Hóa đơn
-                    foreach (var dangKy in lopHocPhan.DangKyHocPhans.ToList())
+                    try
                     {
-                        // Tìm Hóa đơn của sinh viên đó trong học kỳ này
-                        var hoaDon = await _context.HoaDons
-                            .Include(hd => hd.ChiTietHoaDons)
-                            .FirstOrDefaultAsync(hd => hd.MaSv == dangKy.MaSv && hd.MaHk == dangKy.MaHk);
-
-                        if (hoaDon != null)
-                        {
-                            // Tìm dòng chi tiết hóa đơn tương ứng với lớp này để trừ tiền
-                            // (Dựa vào nội dung hoặc logic nào đó. Ở đây ta tìm theo tên lớp trong nội dung)
-                            var chiTietToRemove = hoaDon.ChiTietHoaDons
-                                .FirstOrDefault(ct => ct.NoiDung.Contains(lopHocPhan.TenLhp));
-
-                            if (chiTietToRemove != null)
-                            {
-                                // Trừ tiền
-                                hoaDon.TongTien -= chiTietToRemove.SoTien;
-                                if (hoaDon.TongTien < 0) hoaDon.TongTien = 0;
-
-                                // Xóa dòng chi tiết
-                                _context.ChiTietHoaDons.Remove(chiTietToRemove);
-                            }
-
-                            // Nếu hóa đơn hết tiền và hết chi tiết -> Xóa luôn hóa đơn cho gọn
-                            if (hoaDon.ChiTietHoaDons.Count == 0)
-                            {
-                                _context.HoaDons.Remove(hoaDon);
-                            }
-                            else
-                            {
-                                _context.HoaDons.Update(hoaDon);
-                            }
-                        }
-
-                        // Xóa bản ghi đăng ký
-                        _context.DangKyHocPhans.Remove(dangKy);
+                        await _dangKyService.CancelRegistrationAsync(dk.MaSv, maLhp, "PhongTaiChinh");
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception($"Lỗi khi hủy sinh viên {dk.MaSv}: {ex.Message}");
                     }
                 }
 
-                // 3. Xóa Lớp học phần
-                _context.LopHocPhans.Remove(lopHocPhan);
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                var lop = await _context.LopHocPhans.FindAsync(maLhp);
+                if (lop != null)
+                {
+                    lop.SiSoThucTe = 0;
+                    _context.LopHocPhans.Update(lop);
+                    await _context.SaveChangesAsync();
+                }
             }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
     }
 }

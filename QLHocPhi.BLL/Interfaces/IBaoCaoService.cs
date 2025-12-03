@@ -1,4 +1,5 @@
-﻿using System;
+﻿using QLHocPhi.Common.Dtos;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,8 @@ namespace QLHocPhi.BLL.Interfaces
 {
     public interface IBaoCaoService
     {
-        // Nhận vào Mã Học Kỳ, trả về file PDF
         Task<byte[]> ExportBaoCaoCongNoPdfAsync(string maHk);
+
+        Task<List<BaoCaoCongNoDto>> GetListBaoCaoAsync(string maHk, string? maSv);
     }
 }

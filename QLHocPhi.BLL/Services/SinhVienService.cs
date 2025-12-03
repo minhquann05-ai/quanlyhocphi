@@ -32,7 +32,6 @@ namespace QLHocPhi.BLL.Services
 
             if (searchDto != null)
             {
-                // Lọc theo từng tiêu chí (nếu có nhập)
                 if (!string.IsNullOrEmpty(searchDto.MaSv))
                     query = query.Where(sv => sv.MaSv.ToLower().Contains(searchDto.MaSv.ToLower()));
 
@@ -73,30 +72,25 @@ namespace QLHocPhi.BLL.Services
 
         public async Task<SinhVienDto> CreateAsync(SinhVienCreateDto createDto)
         {
-            // 1. Kiểm tra trùng mã
             if (await _context.SinhViens.AnyAsync(s => s.MaSv == createDto.MaSv))
                 throw new Exception("Mã sinh viên đã tồn tại.");
 
             var sinhVien = _mapper.Map<SinhVien>(createDto);
 
-            // Bắt đầu Transaction để đảm bảo tính toàn vẹn
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // 2. Thêm Sinh Viên
                 _context.SinhViens.Add(sinhVien);
 
-                // 3. TỰ ĐỘNG TẠO TÀI KHOẢN (Logic chúng ta đã bàn)
                 var taiKhoan = new NguoiDung
                 {
-                    TenDangNhap = sinhVien.MaSv, // User = Mã SV
-                    MatKhau = "123456",          // Pass mặc định
+                    TenDangNhap = sinhVien.MaSv,     
+                    MatKhau = "123456",             
                     VaiTro = "SinhVien",
                     MaSv = sinhVien.MaSv
                 };
                 _context.NguoiDungs.Add(taiKhoan);
 
-                // 4. Lưu cả 2 cùng lúc
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -116,7 +110,6 @@ namespace QLHocPhi.BLL.Services
                 throw new KeyNotFoundException("Sinh viên không tồn tại.");
             }
 
-            // Dùng AutoMapper để cập nhật dữ liệu từ DTO vào Entity
             _mapper.Map(updateDto, sinhVien);
 
             _context.SinhViens.Update(sinhVien);
@@ -131,15 +124,12 @@ namespace QLHocPhi.BLL.Services
                 throw new KeyNotFoundException("Sinh viên không tồn tại.");
             }
 
-            // 1. Xóa tài khoản đăng nhập tương ứng (nếu có)
-            var taiKhoan = await _context.NguoiDungs.FindAsync(maSv); // Vì User = MaSv
+            var taiKhoan = await _context.NguoiDungs.FindAsync(maSv);     
             if (taiKhoan != null)
             {
                 _context.NguoiDungs.Remove(taiKhoan);
             }
 
-            // 2. Xóa sinh viên
-            // Lưu ý: Nếu sinh viên đã có Hóa đơn/Điểm, việc xóa có thể bị lỗi do ràng buộc khóa ngoại (tùy CSDL)
             _context.SinhViens.Remove(sinhVien);
 
             await _context.SaveChangesAsync();

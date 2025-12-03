@@ -33,7 +33,6 @@ namespace QuanLyHocPhi.BLL.Services
                 }
                 if (hoaDon.MaSv != createDto.MaSv)
                 {
-                    // Nếu mã SV không khớp với chủ nhân hóa đơn -> Báo lỗi
                     throw new Exception($"Hóa đơn {hoaDon.MaHd} không thuộc về sinh viên {createDto.MaSv}. Vui lòng kiểm tra lại.");
                 }
 

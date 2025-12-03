@@ -16,10 +16,6 @@ namespace QLHocPhi.API.Controllers
             _baoCaoService = baoCaoService;
         }
 
-        /// <summary>
-        /// Xuất báo cáo công nợ theo học kỳ (PDF)
-        /// </summary>
-        // GET: api/BaoCao/CongNo?maHk=HK20251
         [HttpGet("CongNo")]
         public async Task<IActionResult> ExportCongNo([FromQuery] string maHk)
         {
@@ -28,14 +24,25 @@ namespace QLHocPhi.API.Controllers
                 if (string.IsNullOrEmpty(maHk))
                     return BadRequest("Vui lòng cung cấp mã học kỳ (maHk).");
 
-                // 1. Tạo file PDF
                 byte[] pdfBytes = await _baoCaoService.ExportBaoCaoCongNoPdfAsync(maHk);
 
-                // 2. Đặt tên file
                 string fileName = $"BaoCaoCongNo_{maHk}_{DateTime.Now:yyyyMMdd}.pdf";
 
-                // 3. Trả về file
                 return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("GetCongNoData")]
+        public async Task<IActionResult> GetCongNoData([FromQuery] string maHk, [FromQuery] string? maSv)
+        {
+            try
+            {
+                var data = await _baoCaoService.GetListBaoCaoAsync(maHk, maSv);
+                return Ok(data);
             }
             catch (Exception ex)
             {

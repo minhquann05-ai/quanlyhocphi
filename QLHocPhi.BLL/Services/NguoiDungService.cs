@@ -19,7 +19,6 @@ namespace QLHocPhi.BLL.Services
     {
         private readonly AppDbContext _context;
         private readonly IMapper _mapper;
-        // Khóa bí mật (Nên để trong appsettings.json)
         private const string SECRET_KEY = "111111111111111111111111111111111111111111111";
 
         public NguoiDungService(AppDbContext context)
@@ -29,18 +28,15 @@ namespace QLHocPhi.BLL.Services
 
         public async Task<UserDto> LoginAsync(LoginDto loginDto)
         {
-            // 1. Tìm user
             var user = await _context.NguoiDungs
                 .Include(u => u.SinhVien)
                 .FirstOrDefaultAsync(u => u.TenDangNhap == loginDto.TenDangNhap);
 
-            // 2. Kiểm tra pass (Plain text cho đơn giản)
             if (user == null || user.MatKhau != loginDto.MatKhau)
             {
                 throw new Exception("Tên đăng nhập hoặc mật khẩu không chính xác.");
             }
 
-            // 3. Tạo Token JWT
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(SECRET_KEY);
 
@@ -87,7 +83,6 @@ namespace QLHocPhi.BLL.Services
 
         public async Task<int> GenerateAccountsForStudentsAsync()
         {
-            // 1. Tìm SV chưa có tài khoản
             var studentsWithoutAccount = await _context.SinhViens
                 .Where(sv => !_context.NguoiDungs.Any(u => u.MaSv == sv.MaSv))
                 .ToListAsync();
@@ -110,12 +105,11 @@ namespace QLHocPhi.BLL.Services
             await _context.NguoiDungs.AddRangeAsync(newAccounts);
             await _context.SaveChangesAsync();
 
-            return newAccounts.Count; // Chỉ trả về số lượng
+            return newAccounts.Count;      
         }
 
         public async Task CreateDefaultAdminAsync()
         {
-            // Kiểm tra xem admin đã tồn tại chưa
             var adminExists = await _context.NguoiDungs.AnyAsync(u => u.TenDangNhap == "admin");
 
             if (adminExists)
@@ -128,7 +122,7 @@ namespace QLHocPhi.BLL.Services
                 TenDangNhap = "admin",
                 MatKhau = "123456",
                 VaiTro = "PhongTaiChinh",
-                MaSv = null // Admin không có mã sinh viên
+                MaSv = null       
             };
 
             _context.NguoiDungs.Add(admin);

@@ -9,7 +9,7 @@ namespace QLHocPhi.Common.Dtos
         public string? MaHd { get; set; }
 
         [Required]
-        public string? PhuongThuc { get; set; } // "Online", "Tiền mặt", "Chuyển khoản"
+        public string? PhuongThuc { get; set; } 
 
         [Range(1, double.MaxValue)]
         public decimal SoTienTt { get; set; } 

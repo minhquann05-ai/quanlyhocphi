@@ -23,7 +23,6 @@ namespace QLHocPhi.API.Controllers
         [Authorize(Roles = "PhongTaiChinh")]
         public async Task<IActionResult> GetAllHoaDon([FromQuery] string? trangThai)
         {
-            // Truyền tham số trangThai vào Service
             var result = await _hoaDonService.GetAllAsync(trangThai);
             return Ok(result);
         }
@@ -32,19 +31,16 @@ namespace QLHocPhi.API.Controllers
         [Authorize(Roles = "PhongTaiChinh,SinhVien")]
         public async Task<IActionResult> GetHoaDonByMaSv([FromQuery] string? maSv, [FromQuery] string? trangThai)
         {
-            // 1. Lấy thông tin từ Token
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
             var tokenMaSv = User.FindFirst("MaSv")?.Value;
 
             string targetMaSv = maSv;
 
-            // 2. Logic phân quyền chọn mã SV
             if (role == "SinhVien")
             {
-                // Sinh viên chỉ được xem của chính mình
                 targetMaSv = tokenMaSv;
             }
-            else // PhongTaiChinh
+            else  
             {
                 if (string.IsNullOrEmpty(targetMaSv))
                 {
@@ -57,7 +53,6 @@ namespace QLHocPhi.API.Controllers
                 return Unauthorized("Không xác định được danh tính sinh viên.");
             }
 
-            // 3. Gọi Service
             var result = await _hoaDonService.GetByMaSvAsync(targetMaSv, trangThai);
             return Ok(result);
         }

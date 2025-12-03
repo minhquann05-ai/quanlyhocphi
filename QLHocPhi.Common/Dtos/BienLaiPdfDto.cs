@@ -2,7 +2,6 @@
 
 namespace QLHocPhi.Common.Dtos
 {
-    // Lớp này chứa tất cả thông tin cần thiết để in 1 biên lai
     public class BienLaiPdfDto
     {
         public string? SoBienLai { get; set; }

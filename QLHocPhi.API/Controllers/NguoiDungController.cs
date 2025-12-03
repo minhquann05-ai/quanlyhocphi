@@ -19,9 +19,6 @@ namespace QLHocPhi.API.Controllers
             _nguoiDungService = nguoiDungService;
         }
 
-        /// <summary>
-        /// Đăng nhập hệ thống
-        /// </summary>
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
@@ -37,9 +34,6 @@ namespace QLHocPhi.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Đổi mật khẩu (Dành cho sinh viên)
-        /// </summary>
         [HttpPut("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
@@ -49,18 +43,12 @@ namespace QLHocPhi.API.Controllers
 
             try
             {
-                // --- NÂNG CẤP BẢO MẬT ---
-                // Lấy tên đăng nhập từ chính Token của người đang gọi API
-                // Tránh trường hợp ông A đăng nhập nhưng cố tình nhập User của ông B để đổi
                 var currentUserName = User.FindFirst(ClaimTypes.Name)?.Value;
 
                 if (string.IsNullOrEmpty(currentUserName))
                     return Unauthorized();
 
-                // Ghi đè tên đăng nhập trong DTO bằng tên thật trong Token
                 dto.TenDangNhap = currentUserName;
-                // ------------------------
-
                 await _nguoiDungService.ChangePasswordAsync(dto);
                 return Ok(new { message = "Đổi mật khẩu thành công!" });
             }
@@ -70,9 +58,6 @@ namespace QLHocPhi.API.Controllers
             }
         }
 
-        /// <summary>
-        /// [Admin] Tự động tạo tài khoản cho tất cả sinh viên chưa có (Pass: 123456)
-        /// </summary>
         [HttpPost("generate-student-accounts")]
         [Authorize(Roles = "PhongTaiChinh")]
         public async Task<IActionResult> GenerateStudentAccounts()
@@ -94,7 +79,6 @@ namespace QLHocPhi.API.Controllers
         {
             try
             {
-                // Gọi Service xử lý (Thay vì dùng _context)
                 await _nguoiDungService.CreateDefaultAdminAsync();
                 return Ok("Đã tạo tài khoản: admin / 123456");
             }

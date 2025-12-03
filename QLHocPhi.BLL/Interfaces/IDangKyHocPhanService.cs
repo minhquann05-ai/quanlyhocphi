@@ -8,5 +8,6 @@ namespace QLHocPhi.BLL.Interfaces
         Task<IEnumerable<LopHocPhanDto>> GetAvailableClassesForStudentAsync(string maSv);
         Task CancelRegistrationAsync(string maSv, string maLhp, string role = null);
         Task<IEnumerable<KetQuaDangKyDto>> GetRegisteredClassesAsync(string maSv);
+
     }
 }

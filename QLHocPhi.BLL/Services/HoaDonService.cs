@@ -20,16 +20,13 @@ namespace QLHocPhi.BLL.Services
 
         public async Task<IEnumerable<HoaDonDto>> GetAllAsync(string? trangThai = null)
         {
-            // 1. Khởi tạo query
             var query = _context.HoaDons.AsQueryable();
 
-            // 2. Nếu có truyền trạng thái thì lọc
             if (!string.IsNullOrEmpty(trangThai))
             {
                 query = query.Where(hd => hd.TrangThai == trangThai);
             }
 
-            // 3. Include các bảng liên quan và thực thi
             var hoaDons = await query
                 .Include(hd => hd.SinhVien)
                 .Include(hd => hd.HocKy)

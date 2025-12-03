@@ -29,7 +29,6 @@ namespace QLHocPhi.DAL.Entities
         [Column("ma_sv")]
         public string? MaSv { get; set; }
 
-        // Navigation property
         [ForeignKey("MaSv")]
         public virtual SinhVien? SinhVien { get; set; }
     }

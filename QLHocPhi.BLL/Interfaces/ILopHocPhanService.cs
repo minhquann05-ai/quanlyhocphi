@@ -14,5 +14,6 @@ namespace QLHocPhi.BLL.Interfaces
         Task<LopHocPhanDto> CreateAsync(LopHocPhanCreateDto createDto);
         Task UpdateAsync(string maLhp, LopHocPhanUpdateDto updateDto);
         Task DeleteAsync(string maLhp);
+        Task RemoveAllStudentsAsync(string maLhp);
     }
 }

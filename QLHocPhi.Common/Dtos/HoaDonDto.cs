@@ -13,7 +13,6 @@ namespace QLHocPhi.Common.Dtos
         public decimal? TongTien { get; set; }
         public string? TrangThai { get; set; }
 
-        // Danh sách chi tiết
         public List<ChiTietHoaDonDto>? ChiTiet { get; set; }
     }
 }

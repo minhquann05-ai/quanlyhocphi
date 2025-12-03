@@ -17,6 +17,6 @@ namespace QLHocPhi.Common.Dtos
         public int SiSoToiDa { get; set; }
         public int? SiSoThucTe { get; set; }
 
-        public string TrangThai { get; set; } // "Đang mở", "Đã khóa"...
+        public string TrangThai { get; set; } 
     }
 }

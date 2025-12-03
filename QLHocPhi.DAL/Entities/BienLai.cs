@@ -26,7 +26,6 @@ namespace QLHocPhi.DAL.Entities
         [Column("noi_dung")]
         public string? NoiDung { get; set; }
 
-        // Navigation property
         [ForeignKey("MaTt")]
         public virtual ThanhToan? ThanhToan { get; set; }
     }

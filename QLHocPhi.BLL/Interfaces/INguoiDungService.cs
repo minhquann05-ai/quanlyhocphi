@@ -11,7 +11,7 @@ namespace QLHocPhi.BLL.Interfaces
     {
         Task<UserDto> LoginAsync(LoginDto loginDto);
         Task ChangePasswordAsync(ChangePasswordDto dto);
-        Task<int> GenerateAccountsForStudentsAsync(); // Trả về số lượng tài khoản đã tạo
+        Task<int> GenerateAccountsForStudentsAsync(); 
         Task CreateDefaultAdminAsync();
     }
 }
